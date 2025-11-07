@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Fala Exillany Mota</title>
+    <!-- Carrega Tailwind CSS para estilização --><script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilo para simular o fundo do WhatsApp */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f0f0; /* Fundo geral */
+        }
+
+        .chat-container {
+            max-width: 600px;
+            height: 100vh;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #ECE5DD; /* Fundo do chat - estilo WhatsApp */
+            overflow: hidden;
+        }
+
+        /* Estilo da bolha do assistente (esquerda) */
+        .assistant-bubble {
+            background-color: #ffffff;
+            border-radius: 12px 12px 12px 4px;
+            box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+            padding: 10px 12px;
+            max-width: 85%;
+            margin-right: auto;
+            margin-bottom: 8px;
+            white-space: pre-wrap; /* Mantém quebras de linha */
+        }
+
+        /* Estilo ESPECÍFICO para a bolha do indicador de digitação (menor) */
+        .typing-bubble {
+            background-color: #ffffff;
+            border-radius: 12px 12px 12px 4px;
+            box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+            padding: 6px 10px; /* Redução de padding */
+            display: inline-flex; /* Para envolver o conteúdo de forma justa */
+            align-items: center;
+            margin-right: auto;
+            margin-bottom: 8px;
+        }
+
+        /* Estilo da bolha do usuário (direita) */
+        .user-bubble {
+            background-color: #DCF8C6; /* Verde suave do WhatsApp */
+            border-radius: 12px 12px 4px 12px;
+            box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+            padding: 10px 12px;
+            max-width: 85%;
+            margin-left: auto;
+            margin-bottom: 8px;
+            white-space: pre-wrap;
+        }
+
+        /* Animação do indicador de digitação */
+        @keyframes blink {
+            0%, 100% { opacity: .2; }
+            33% { opacity: 1; }
+            66% { opacity: .2; }
+        }
+
+        .typing-indicator span {
+            animation: blink 1.4s infinite;
+            /* Tamanho da fonte ajustado */
+            font-size: 1rem; 
+            line-height: 1;
+        }
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="chat-container">
+        <!-- Cabeçalho (Estilo WhatsApp) --><header class="bg-teal-600 p-4 text-white shadow-md flex items-center rounded-b-lg">
+            <div class="flex-shrink-0 mr-3">
+                <span class="text-3xl">🗣️</span>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg">Teste da Fala</h1>
+                <p class="text-xs opacity-80">Assistente da Exillany Mota</p>
+            </div>
+        </header>
+
+        <!-- Área de Mensagens --><main id="chat-messages" class="flex-grow p-4 overflow-y-auto space-y-2">
+            <!-- As mensagens serão injetadas aqui --></main>
+
+        <!-- Indicador de Digitação (Inicialmente oculto) --><div id="typing-indicator-container" class="p-2 hidden">
+            <div class="typing-bubble">
+                <div class="typing-indicator text-gray-500">
+                    <span>.</span><span>.</span><span>.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Área de Input e Ações --><footer class="p-3 bg-white border-t border-gray-200">
+            <div id="input-area" class="flex flex-col space-y-3">
+                <!-- Input de Texto (Nome/Idade) --><div id="text-input-group" class="flex items-center space-x-2">
+                    <input type="text" id="user-input" placeholder="Digite sua resposta..."
+                           class="flex-grow border border-gray-300 rounded-full p-3 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                           autocomplete="off">
+                    <button id="send-btn" onclick="handleUserInput()"
+                            class="bg-teal-600 text-white rounded-full p-3 transition duration-300 hover:bg-teal-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transform rotate-45" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Botões de Sim/Não (Inicialmente ocultos) --><div id="action-buttons" class="flex justify-around space-x-2 hidden">
+                    <button onclick="handleUserInput('sim')" class="flex-1 bg-green-500 text-white p-3 rounded-xl font-semibold shadow-md transition duration-300 hover:bg-green-600">
+                        Sim ✅
+                    </button>
+                    <button onclick="handleUserInput('não')" class="flex-1 bg-red-500 text-white p-3 rounded-xl font-semibold shadow-md transition duration-300 hover:bg-red-600">
+                        Não ❌
+                    </button>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Variáveis de estado
+        let step = 0;
+        let childName = '';
+        let childAgeMonths = 0;
+        let yesCount = 0; // Total de INDICADORES POSITIVOS (máximo 4)
+        let currentQuestionIndex = 0; // 0, 1, 2, 3
+
+        // Elementos DOM
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const textInputGroup = document.getElementById('text-input-group');
+        const actionButtons = document.getElementById('action-buttons');
+        const typingIndicatorContainer = document.getElementById('typing-indicator-container');
+
+        // --- Funções Auxiliares ---
+
+        // CONVERTE SINTAXE MARKDOWN (**) PARA HTML (<strong>)
+        const formatMarkdown = (text) => {
+            return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        };
+
+        // Função para simular um atraso (sleep)
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        // Função para rolar o chat para o final
+        const scrollToBottom = () => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        };
+
+        // Adiciona uma mensagem ao chat (do assistente)
+        const addAssistantMessage = (rawText) => {
+            typingIndicatorContainer.classList.add('hidden');
+            // Remove espaços/quebras de linha desnecessários do início/fim para evitar desalinhamento
+            const trimmedText = rawText.trim(); 
+            const formattedText = formatMarkdown(trimmedText);
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'flex justify-start';
+            // Usamos innerHTML porque o texto já foi sanitizado (e o negrito é crucial)
+            msgDiv.innerHTML = `<div class="assistant-bubble">${formattedText}</div>`; 
+            chatMessages.appendChild(msgDiv);
+            scrollToBottom();
+        };
+
+        // Adiciona uma mensagem do usuário ao chat
+        const addUserMessage = (text) => {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'flex justify-end';
+            msgDiv.innerHTML = `<div class="user-bubble">${text}</div>`;
+            chatMessages.appendChild(msgDiv);
+            scrollToBottom();
+        };
+
+        // Mostra o indicador de digitação (e rola para baixo)
+        const showTypingIndicator = () => {
+            chatMessages.appendChild(typingIndicatorContainer);
+            typingIndicatorContainer.classList.remove('hidden');
+            scrollToBottom();
+        };
+
+        // --- Lógica Principal do Chat ---
+
+        // Inicia o fluxo de conversa - AGORA INICIA AUTOMATICAMENTE
+        const startChat = async () => {
+            const initialMessage = `Olá! 👋 Eu sou o assistente da fonoaudióloga **Exillany Mota**. Posso te ajudar a descobrir se a fala da sua criança está dentro do esperado pra idade.`;
+            addAssistantMessage(initialMessage);
+            
+            showTypingIndicator();
+            await sleep(2000); // Pequeno delay antes da primeira pergunta
+            
+            const firstQuestion = `Perfeito! 💛 Qual é o nome da criança?`;
+            addAssistantMessage(firstQuestion);
+            
+            // Ativa o input de texto para o nome
+            textInputGroup.classList.remove('hidden');
+            actionButtons.classList.add('hidden');
+            step = 1; // Passo 1: Coletar Nome
+        };
+
+        // Função para pontuar a resposta Sim/Não
+        const scoreAnswer = (answer, ageGroup, qIndex) => {
+            const isSim = answer.toLowerCase().includes('sim');
+            let point = 0;
+
+            // Pontuação Invertida: Se a pergunta é sobre um PROBLEMA, "NÃO" ganha ponto.
+            // Índice 2 (Q3) para 3-5 anos: Trocas de sons
+            const isPreschoolQ2 = ageGroup === 'preschool' && qIndex === 2;
+            
+            // Índice 3 (Q4) para +5 anos: Trocas de sons
+            const isSchoolQ3 = ageGroup === 'school' && qIndex === 3;
+            
+            // Lógica de Pontuação:
+            if (isPreschoolQ2 || isSchoolQ3) {
+                // Se for pergunta sobre PROBLEMA: "NÃO" é o positivo (problema ausente = 1 ponto).
+                if (!isSim) { 
+                    point = 1;
+                }
+            } else {
+                // Para todas as outras perguntas sobre HABILIDADES: "SIM" é o positivo (habilidade presente = 1 ponto).
+                if (isSim) {
+                    point = 1;
+                }
+            }
+            return point;
+        };
+
+        // Processa o passo atual e avança
+        const processStep = async (message) => {
+            showTypingIndicator();
+            const delay = 1500 + Math.random() * 1000; // 1.5s a 2.5s
+            await sleep(delay);
+
+            let nextMessage = '';
+
+            // --- Passo 1: Coletar Nome ---
+            if (step === 1) {
+                childName = message.trim();
+                nextMessage = `Quantos anos e meses o(a) **${childName}** tem? (Ex: 3 anos e 6 meses, ou só 4 anos, ou 10 meses)`;
+                step = 2;
+            }
+            // --- Passo 2: Coletar Idade e Iniciar Transição para Q1 ---
+            else if (step === 2) {
+                const ageText = message.toLowerCase();
+                let years = 0;
+                let months = 0;
+
+                const yearMatch = ageText.match(/(\d+)\s*(ano|anos)/);
+                if (yearMatch) {
+                    years = parseInt(yearMatch[1], 10);
+                }
+
+                const monthMatch = ageText.match(/(\d+)\s*(mês|meses)/);
+                if (monthMatch) {
+                    months = parseInt(monthMatch[1], 10);
+                }
+
+                childAgeMonths = (years * 12) + months;
+
+                if (childAgeMonths === 0) {
+                    nextMessage = `Não consegui entender a idade. Poderia me dizer novamente, por favor? (Ex: 2 anos e 3 meses)`;
+                } else {
+                    const yearsDisplay = years > 0 ? `${years} ano(s)` : '';
+                    const monthsDisplay = months > 0 ? `${months} mês(es)` : '';
+                    let ageDisplay = yearsDisplay;
+                    if (yearsDisplay && monthsDisplay) {
+                        ageDisplay += ` e ${monthsDisplay}`;
+                    } else if (monthsDisplay) {
+                        ageDisplay = monthsDisplay;
+                    }
+
+                    // Envia a mensagem de transição (separada da Q1)
+                    nextMessage = `Entendido! **${childName}** tem ${ageDisplay}. Vamos começar as perguntas. 💡`;
+                    addAssistantMessage(nextMessage);
+
+                    step = 3; // Define o próximo passo como o envio da Q1 (Transição)
+                    
+                    // Auto-avançar para o próximo passo (enviar Q1)
+                    showTypingIndicator(); 
+                    await sleep(1500); 
+                    processStep(null); // Chama o próximo passo (step 3) sem input do usuário.
+                    return; // Sai do processamento atual
+                }
+            }
+            // --- Passo 3: Enviar Q1 e Configurar Botões (Auto-avançado de Step 2) ---
+            else if (step === 3) {
+                // Este passo envia a Q1 e configura a UI para Sim/Não
+                currentQuestionIndex = 0;
+                yesCount = 0; 
+                
+                const firstQuestion = getQuestion(currentQuestionIndex); 
+                nextMessage = firstQuestion;
+                
+                // Setup UI for Q&A
+                textInputGroup.classList.add('hidden');
+                actionButtons.classList.remove('hidden');
+
+                step = 4; // Avança para o passo onde Q1 será respondida
+            }
+            // --- Passo 4, 5, 6, 7: Fluxo de Perguntas (Q&A loop) ---
+            else if (step >= 4 && step <= 7) { 
+                // Este bloco é executado 4 vezes (para as 4 respostas)
+                
+                // 1. PONTUAÇÃO (Qanswered = step - 4)
+                const ageGroup = getAgeGroup();
+                const questionIndexToScore = step - 4; // Step 4 scores Q0, Step 7 scores Q3
+                
+                // Aplica a pontuação da pergunta recém-respondida
+                yesCount += scoreAnswer(message, ageGroup, questionIndexToScore);
+
+                // 2. AVANÇO
+                currentQuestionIndex++;
+                const nextQuestion = getQuestion(currentQuestionIndex);
+                
+                if (!nextQuestion) { 
+                    step = 8; // Go to result
+                    nextMessage = generateResult();
+                } else {
+                    nextMessage = nextQuestion;
+                    step++; 
+                }
+            }
+            // --- Passo 8: Resultado Final ---
+            else if (step === 8) {
+                nextMessage = generateResult();
+            }
+
+            // Envia a próxima mensagem (se não foi enviada no auto-advance)
+            addAssistantMessage(nextMessage);
+        };
+
+        // Retorna a pergunta baseada na idade e no índice (0, 1, 2, 3)
+        const getQuestion = (qIndex) => {
+            const ageGroup = getAgeGroup();
+            
+            // O máximo de perguntas agora é 4 (índices 0 a 3)
+            if (qIndex > 3) return null; 
+
+            let questions = [];
+
+            if (ageGroup === 'infant') { // 0 a 23 meses
+                questions = [
+                    `**${childName}** já fala algumas palavrinhas simples como ‘mamãe’, ‘papai’ ou nomes de objetos? 👶`,
+                    `Ele(a) tenta repetir o que ouve e imitar sons? 🗣️`,
+                    `Costuma apontar o que quer, ou usa gestos para se comunicar quando quer algo? 🖐️`,
+                    `Ele(a) entende ordens simples, como "Dá tchau" ou "Vem cá"? 💡`
+                ];
+            } else if (ageGroup === 'toddler') { // 24 a 35 meses
+                questions = [
+                    `**${childName}** já forma pequenas frases com 2 a 3 palavras, como ‘quero água’ ou ‘cadê mamãe’? 💬`,
+                    `As pessoas de fora da família (vizinhos, amigos) entendem bem o que ele(a) fala? 👂`,
+                    `Ele(a) gosta de conversar e faz perguntas simples (ex: "O que é isso?")? 🤔`,
+                    `Ele(a) entende a diferença entre "grande" e "pequeno"? 📏`
+                ];
+            } else if (ageGroup === 'preschool') { // 36 a 59 meses
+                questions = [
+                    `**${childName}** já consegue fazer frases completas e contar pequenas histórias (com começo e fim)? 📖`,
+                    `Ele(a) gosta de usar a imaginação em brincadeiras e criar diálogos entre bonecos ou personagens? 💭`,
+                    `A fala do(a) **${childName}** apresenta trocas de sons ou dificuldade em pronunciar consoantes mais complexas (ex: trocar 'gato' por 'dato' ou 'prato' por 'pato')? 🗣️`, 
+                    `Ele(a) entende e executa instruções com duas ou mais partes, tipo ‘pega o livro e guarda na mochila’? 🧠`
+                ];
+            } else if (ageGroup === 'school') { // 60 meses ou mais
+                questions = [
+                    `**${childName}** fala com clareza e é compreendido por qualquer pessoa (até por quem não o conhece)? 🎯`,
+                    `Consegue relatar fatos, ideias ou sentimentos com detalhes e em sequência lógica? 📝`,
+                    `Ele(a) entende o sentido das palavras que têm duplo significado ou metáforas simples? 🧐`,
+                    `Ele(a) ainda troca alguns sons na fala (como 'R', 'L', 'S', ou 'Z') ou a articulação está totalmente clara? 🤔`
+                ];
+            }
+            
+            return questions[qIndex];
+        };
+
+        // Determina a faixa etária com base nos meses
+        const getAgeGroup = () => {
+            if (childAgeMonths < 24) return 'infant'; 
+            if (childAgeMonths < 36) return 'toddler'; 
+            if (childAgeMonths < 60) return 'preschool'; 
+            return 'school';
+        };
+
+        // Gera o resultado final
+        const generateResult = () => {
+            // Threshold: 3 pontos de 4 (75%) é o esperado
+            const threshold = 3; 
+            const isDevelopmentExpected = yesCount >= threshold;
+            let resultMessage = '';
+
+            if (isDevelopmentExpected) {
+                resultMessage = `Parece que o desenvolvimento de fala do(a) **${childName}** está **dentro do esperado** para a idade! 👏 Mesmo assim, há sempre maneiras de estimular ainda mais essa fase tão importante. 💡`;
+            } else {
+                resultMessage = `O desenvolvimento de fala do(a) **${childName}** pode estar um pouquinho **abaixo do esperado** (Pontuação: ${yesCount}/4). Mas fique tranquilo(a)! Com orientação adequada e estímulos certos, é possível avançar muito rápido. 🌱`;
+            }
+            
+            // Adiciona a conclusão e o CTA, garantindo que não haja espaços ou quebras de linha indesejadas no início.
+            resultMessage += '<br><br>';
+            resultMessage += '📘 A Exillany preparou um **Guia de Desenvolvimento de Fala e Linguagem**, com orientações práticas e atividades simples para estimular a fala no dia a dia. Quer acessar agora? 👇';
+            resultMessage += '<br><br>';
+            
+            // Link CTA para o eBook (CORREÇÃO DE LINK E OCUPANDO W-FULL)
+            resultMessage += `<a href="https://exillanymota.my.canva.site/pagina-de-vendas-ebook-guia-fala-e-linguagem" target="_blank" class="block w-full text-center bg-yellow-500 text-white p-3 rounded-xl font-bold shadow-md transition duration-300 hover:bg-yellow-600">
+                ➡️ Acessar o Guia de Fala e Linguagem
+            </a>`;
+            
+            resultMessage += '<br><br>';
+            resultMessage += 'Obrigada por participar do teste com a Exillany Mota 💙 Continue acompanhando nossas dicas e conteúdos sobre fala e linguagem! Siga-nos no Instagram para mais informações:';
+            resultMessage += '<br><br>';
+
+            // Botão para o Instagram (OCUPANDO W-FULL)
+            resultMessage += `<a href="https://www.instagram.com/fono.exillanymota" target="_blank" class="flex items-center justify-center w-full bg-pink-500 text-white p-3 rounded-xl font-bold shadow-md transition duration-300 hover:bg-pink-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-instagram mr-2">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                </svg>
+                @fono.exillanymota no Instagram
+            </a>`;
+
+
+            // Desativa os inputs após a conclusão
+            textInputGroup.classList.add('hidden');
+            actionButtons.classList.add('hidden');
+            
+            return resultMessage;
+        };
+
+        // --- Gerenciamento de Input ---
+
+        // Função chamada ao clicar em Enviar ou nos botões Sim/Não
+        const handleUserInput = (buttonResponse = null) => {
+            let message = '';
+
+            if (buttonResponse) {
+                message = buttonResponse;
+            } else {
+                message = userInput.value.trim();
+                userInput.value = '';
+            }
+
+            if (message === '') return; // Ignora inputs vazios
+
+            // A bolha do usuário é adicionada ANTES do processamento e do indicador de digitação
+            addUserMessage(message);
+            
+            // Verifica o estado atual e processa a mensagem
+            processStep(message);
+        };
+
+        // Adiciona funcionalidade de 'Enter' para o input de texto
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !textInputGroup.classList.contains('hidden')) {
+                handleUserInput();
+            }
+        });
+
+        // Inicia o chat ao carregar a página
+        window.onload = startChat;
+
+    </script>
+</body>
+</html>
